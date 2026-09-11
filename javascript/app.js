@@ -4,7 +4,13 @@
   const fallback = [['OneUFy','A project focused on extending and customizing the One UI Android experience.'],['FontMerger','A Python utility for merging fonts into a single font.'],['arfix','A tool for fixing broken Arabic text rendering in terminals.'],['QuickDesk','A disposable remote desktop environment designed to be launched with a single command.'],['WebGetter','An open-source utility for retrieving website source code.'],['SuperMario-Tweaker','A device-tweaking module aimed at improving performance and stability for gaming and everyday use.'],['morphe-patches','Java-based patches for the Morphe project.'],['SpoofingCollection','A collection of Magisk and LSPosed modules for customizing Android device fingerprints and build properties.'],['WebGetter-Website','The website interface and companion project for WebGetter.'],['NoSleep-Termux','A simple Bash script that helps prevent Termux from sleeping in the background.'],['TGCleaner-BOT','A Telethon-based Telegram bot for removing non-admin members from a selected group.'],['SPSS_Android','A Bash script for installing IBM SPSS on Android environments.']];
   const escapeHTML = value => String(value || '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
   const repoSlug = name => `https://github.com/mrx7014/${encodeURIComponent(name)}`;
-  const imageFromReadme = async name => {
+  const generatedReadmeBanner = (name, description) => {
+    const safeName = escapeHTML(name).replace(/&/g, '&amp;');
+    const safeDescription = escapeHTML(description).replace(/&/g, '&amp;').slice(0, 92);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#111c2d"/><stop offset="1" stop-color="#274155"/></linearGradient><pattern id="p" width="42" height="42" patternUnits="userSpaceOnUse"><path d="M42 0H0V42" fill="none" stroke="#c4f267" stroke-opacity=".12"/></pattern></defs><rect width="1200" height="630" fill="url(#g)"/><rect width="1200" height="630" fill="url(#p)"/><circle cx="1030" cy="110" r="180" fill="#c4f267" opacity=".12"/><text x="72" y="102" fill="#c4f267" font-family="monospace" font-size="22" letter-spacing="5">MRX7014 / README</text><text x="72" y="305" fill="#f4f7f5" font-family="Arial,sans-serif" font-size="76" font-weight="700">${safeName}</text><text x="72" y="370" fill="#aab8c3" font-family="monospace" font-size="22">${safeDescription}</text><text x="72" y="550" fill="#c4f267" font-family="monospace" font-size="18">OPEN SOURCE PROJECT ↗</text></svg>`;
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  };
+  const imageFromReadme = async (name, description) => {
     try {
       const response = await fetch(`https://raw.githubusercontent.com/mrx7014/${encodeURIComponent(name)}/master/README.md`);
       if (!response.ok) throw new Error();
@@ -14,10 +20,10 @@
       const htmlImages = [...markdown.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)].map(match => match[1]);
       [...markdownImages, ...htmlImages].forEach(url => { if (url && !/shields\.io|badge|github-readme|komarev|typing-svg|profile-summary/i.test(url)) candidates.push(url); });
       const chosen = candidates[0];
-      if (!chosen) throw new Error();
+      if (!chosen) return generatedReadmeBanner(name, description);
       if (/^https?:\/\//i.test(chosen)) return chosen;
       return `https://raw.githubusercontent.com/mrx7014/${encodeURIComponent(name)}/master/${chosen.replace(/^\.\//,'')}`;
-    } catch { return `https://opengraph.githubassets.com/1/mrx7014/${encodeURIComponent(name)}`; }
+    } catch { return generatedReadmeBanner(name, description); }
   };
   const parseProfileProjects = markdown => {
     const projects=[];
@@ -27,7 +33,7 @@
   const renderProjects = async projects => {
     document.querySelector('[data-count]').textContent = projects.length;
     projectGrid.innerHTML = projects.map((repo,index) => `<article class="project-card ${index===0?'featured':''}"><a class="project-image" href="${repoSlug(repo[0])}" target="_blank" rel="noopener"><img data-banner="${escapeHTML(repo[0])}" alt="${escapeHTML(repo[0])} README banner" loading="lazy"><span class="image-arrow">↗</span></a><div class="project-info"><div><span class="project-number">${String(index+1).padStart(2,'0')} / README PROJECT</span><h3>${escapeHTML(repo[0])}</h3><p>${escapeHTML(repo[1])}</p><div class="repo-meta">Synced from the profile README</div></div><a class="project-link" href="${repoSlug(repo[0])}" target="_blank" rel="noopener">View repository ↗</a></div></article>`).join('');
-    await Promise.all([...projectGrid.querySelectorAll('[data-banner]')].map(async image => { const name=image.dataset.banner; image.src=await imageFromReadme(name); image.onerror=()=>{image.onerror=null;image.src=`https://opengraph.githubassets.com/1/mrx7014/${encodeURIComponent(name)}`;}; }));
+    await Promise.all([...projectGrid.querySelectorAll('[data-banner]')].map(async image => { const name=image.dataset.banner, description=image.closest('.project-card').querySelector('p').textContent; image.src=await imageFromReadme(name, description); image.onerror=()=>{image.onerror=null;image.src=generatedReadmeBanner(name, description);}; }));
   };
   fetch(profileReadme).then(response=>{if(!response.ok)throw new Error();return response.text();}).then(markdown=>renderProjects(parseProfileProjects(markdown))).catch(()=>renderProjects(fallback));
   const savedTheme=localStorage.getItem('mrx-theme'); if(savedTheme)root.dataset.theme=savedTheme; const updateTheme=()=>{const light=root.dataset.theme==='light';themeButton.querySelector('span').textContent=light?'☾':'☼';themeButton.querySelector('b').textContent=light?'Dark mode':'Light mode';}; updateTheme(); themeButton.addEventListener('click',()=>{root.dataset.theme=root.dataset.theme==='light'?'dark':'light';localStorage.setItem('mrx-theme',root.dataset.theme);updateTheme();});
